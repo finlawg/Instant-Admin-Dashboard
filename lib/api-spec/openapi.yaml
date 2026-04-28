@@ -1,0 +1,697 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: dashboard
+    description: External database dashboard operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Create an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "200":
+          description: Signed up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+  /connections:
+    get:
+      operationId: listConnections
+      tags: [dashboard]
+      summary: List saved database connections
+      responses:
+        "200":
+          description: Connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SavedConnection"
+  /connections/{connectionId}:
+    patch:
+      operationId: updateConnection
+      tags: [dashboard]
+      summary: Update connection settings
+      parameters:
+        - $ref: "#/components/parameters/ConnectionIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConnectionRequest"
+      responses:
+        "200":
+          description: Updated connection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedConnection"
+  /connect-db:
+    post:
+      operationId: connectDb
+      tags: [dashboard]
+      summary: Test and save a PostgreSQL database connection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectDbRequest"
+      responses:
+        "200":
+          description: Connection saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedConnection"
+  /tables:
+    get:
+      operationId: listTables
+      tags: [dashboard]
+      summary: List tables for a saved connection
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+      responses:
+        "200":
+          description: Tables
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TablesResponse"
+  /table-stats:
+    get:
+      operationId: listTableStats
+      tags: [dashboard]
+      summary: List approximate table row counts
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+      responses:
+        "200":
+          description: Table stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TableStatsResponse"
+  /columns:
+    get:
+      operationId: listColumns
+      tags: [dashboard]
+      summary: List columns for a table
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+        - $ref: "#/components/parameters/TableName"
+      responses:
+        "200":
+          description: Columns
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ColumnsResponse"
+  /rows:
+    get:
+      operationId: listRows
+      tags: [dashboard]
+      summary: List rows for a table
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+        - $ref: "#/components/parameters/TableName"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/FilterColumn"
+        - $ref: "#/components/parameters/FilterValue"
+        - $ref: "#/components/parameters/SortColumn"
+        - $ref: "#/components/parameters/SortDir"
+      responses:
+        "200":
+          description: Rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RowsResponse"
+  /connections/{connectionId}/tables/{table}/export:
+    get:
+      operationId: exportTableCsv
+      tags: [dashboard]
+      summary: Export table rows as CSV
+      parameters:
+        - $ref: "#/components/parameters/ConnectionIdPath"
+        - $ref: "#/components/parameters/TableNamePath"
+        - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/FilterColumn"
+        - $ref: "#/components/parameters/FilterValue"
+        - $ref: "#/components/parameters/SortColumn"
+        - $ref: "#/components/parameters/SortDir"
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+  /create:
+    post:
+      operationId: createRow
+      tags: [dashboard]
+      summary: Create a row
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+        - $ref: "#/components/parameters/TableName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRowRequest"
+      responses:
+        "200":
+          description: Created row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RowMutationResponse"
+  /update:
+    patch:
+      operationId: updateRow
+      tags: [dashboard]
+      summary: Update a row
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+        - $ref: "#/components/parameters/TableName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRowRequest"
+      responses:
+        "200":
+          description: Updated row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RowMutationResponse"
+  /delete:
+    delete:
+      operationId: deleteRow
+      tags: [dashboard]
+      summary: Delete a row
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+        - $ref: "#/components/parameters/TableName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteRowRequest"
+      responses:
+        "200":
+          description: Deleted row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+  /saved-queries:
+    get:
+      operationId: listSavedQueries
+      tags: [dashboard]
+      summary: List saved queries
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+      responses:
+        "200":
+          description: Saved queries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SavedQuery"
+    post:
+      operationId: createSavedQuery
+      tags: [dashboard]
+      summary: Create a saved query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSavedQueryRequest"
+      responses:
+        "200":
+          description: Saved query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedQuery"
+  /saved-queries/{queryId}:
+    delete:
+      operationId: deleteSavedQuery
+      tags: [dashboard]
+      summary: Delete a saved query
+      parameters:
+        - $ref: "#/components/parameters/QueryIdPath"
+      responses:
+        "200":
+          description: Deleted saved query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+  /saved-queries/{queryId}/run:
+    post:
+      operationId: runSavedQuery
+      tags: [dashboard]
+      summary: Run a saved read-only query
+      parameters:
+        - $ref: "#/components/parameters/QueryIdPath"
+      responses:
+        "200":
+          description: Query result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResultResponse"
+  /query-history:
+    get:
+      operationId: listQueryHistory
+      tags: [dashboard]
+      summary: List query history
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+      responses:
+        "200":
+          description: Query history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QueryHistoryItem"
+  /row-change-history:
+    get:
+      operationId: listRowChangeHistory
+      tags: [dashboard]
+      summary: List row change history
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+      responses:
+        "200":
+          description: Row change history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RowChangeHistoryItem"
+components:
+  parameters:
+    ConnectionId:
+      name: connectionId
+      in: query
+      required: true
+      schema:
+        type: integer
+    ConnectionIdPath:
+      name: connectionId
+      in: path
+      required: true
+      schema:
+        type: integer
+    QueryIdPath:
+      name: queryId
+      in: path
+      required: true
+      schema:
+        type: integer
+    TableName:
+      name: table
+      in: query
+      required: true
+      schema:
+        type: string
+    TableNamePath:
+      name: table
+      in: path
+      required: true
+      schema:
+        type: string
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    Search:
+      name: search
+      in: query
+      schema:
+        type: string
+      description: Search text across row values
+    FilterColumn:
+      name: filterColumn
+      in: query
+      schema:
+        type: string
+      description: Column name for a simple value filter
+    FilterValue:
+      name: filterValue
+      in: query
+      schema:
+        type: string
+      description: Text matched against the selected filter column
+    SortColumn:
+      name: sortColumn
+      in: query
+      schema:
+        type: string
+      description: Column name to sort by
+    SortDir:
+      name: sortDir
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+    AuthCredentials:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+      required: [email, password]
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        createdAt:
+          type: string
+      required: [id, email, createdAt]
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+    ConnectDbRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        connectionString:
+          type: string
+        readOnly:
+          type: boolean
+      required: [connectionString]
+    UpdateConnectionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        readOnly:
+          type: boolean
+    SavedConnection:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        host:
+          type: string
+        databaseName:
+          type: string
+        readOnly:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, name, host, databaseName, readOnly, createdAt]
+    TablesResponse:
+      type: object
+      properties:
+        tables:
+          type: array
+          items:
+            type: string
+      required: [tables]
+    TableStat:
+      type: object
+      properties:
+        table:
+          type: string
+        rowCount:
+          type: integer
+      required: [table, rowCount]
+    TableStatsResponse:
+      type: object
+      properties:
+        tables:
+          type: array
+          items:
+            $ref: "#/components/schemas/TableStat"
+      required: [tables]
+    ColumnInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        dataType:
+          type: string
+        nullable:
+          type: boolean
+        hasDefault:
+          type: boolean
+        isPrimaryKey:
+          type: boolean
+      required: [name, dataType, nullable, hasDefault, isPrimaryKey]
+    ColumnsResponse:
+      type: object
+      properties:
+        table:
+          type: string
+        columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnInfo"
+      required: [table, columns]
+    RowObject:
+      type: object
+      additionalProperties: true
+    RowsResponse:
+      type: object
+      properties:
+        table:
+          type: string
+        columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnInfo"
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/RowObject"
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+      required: [table, columns, rows, page, pageSize, totalCount]
+    CreateRowRequest:
+      type: object
+      properties:
+        values:
+          $ref: "#/components/schemas/RowObject"
+      required: [values]
+    UpdateRowRequest:
+      type: object
+      properties:
+        primaryKey:
+          $ref: "#/components/schemas/RowObject"
+        values:
+          $ref: "#/components/schemas/RowObject"
+      required: [primaryKey, values]
+    DeleteRowRequest:
+      type: object
+      properties:
+        primaryKey:
+          $ref: "#/components/schemas/RowObject"
+      required: [primaryKey]
+    RowMutationResponse:
+      type: object
+      properties:
+        row:
+          $ref: "#/components/schemas/RowObject"
+      required: [row]
+    SavedQuery:
+      type: object
+      properties:
+        id:
+          type: integer
+        connectionId:
+          type: integer
+        name:
+          type: string
+        sql:
+          type: string
+        createdAt:
+          type: string
+      required: [id, connectionId, name, sql, createdAt]
+    CreateSavedQueryRequest:
+      type: object
+      properties:
+        connectionId:
+          type: integer
+        name:
+          type: string
+        sql:
+          type: string
+      required: [connectionId, name, sql]
+    QueryResultResponse:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/RowObject"
+      required: [columns, rows]
+    QueryHistoryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        connectionId:
+          type: integer
+        action:
+          type: string
+        sql:
+          type: string
+        status:
+          type: string
+        error:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, connectionId, action, sql, status, createdAt]
+    RowChangeHistoryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        connectionId:
+          type: integer
+        tableName:
+          type: string
+        action:
+          type: string
+        primaryKey:
+          $ref: "#/components/schemas/RowObject"
+        before:
+          $ref: "#/components/schemas/RowObject"
+        after:
+          $ref: "#/components/schemas/RowObject"
+        createdAt:
+          type: string
+      required: [id, connectionId, tableName, action, createdAt]
